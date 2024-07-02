@@ -1,5 +1,5 @@
 import requests
-import pandas
+import pandas as pd
 from bs4 import BeautifulSoup
 import dataTable
 from dotenv import load_dotenv
@@ -24,8 +24,8 @@ def get_search_params(name, start):
         'q': search_query,
         'key': API_KEY,
         'cx': SEARCH_ID,
-        'cr': 'countryDE',
-        'lr': 'lang_de',
+        'cr': 'de',
+        'lr': 'de',
         'start': start
     }
     return params
@@ -37,31 +37,34 @@ def get_search_results(params):
     # get search params
     try:
         response = requests.get(url, params=params)
+        print('Response HTTP Status Code: ', response.json())
         results = response.json()['items']
     except:
         print("No results for query")
+        print(params)
         results = ''
     return results
 
 
-def store_and_print(results):
-    #print('     ')
-    #print('following links are to consider:')
-    #print('     ')
-    all_results = ''
+def store_and_print(results, name):
+    # Split the string into a list of two elements, handling extra spaces
+    firstName, lastName = name.split(maxsplit=1)
+    all_results = []
     for item in results:
+        
         try:
-            #print(item['link'])
-            
-            website = requests.get(item['link'])
-            soup = BeautifulSoup(website.content, 'html.parser')
-            title = soup.title.text
-            webtext = soup.contents
-            all_results = all_results + item['link'] + " -- Titel: " + title + "\n"
+            #website = requests.get(item['link'])
+            if "linkedin" in item['link'].lower() and "de" in item['link'].lower() and "dir" not in item['link'].lower() and "post" not in item['link'].lower() and (firstName.lower() in item['link'].lower() or lastName.lower() in item['link'].lower()):
+                all_results.append((name, item['link']))
+            #soup = BeautifulSoup(website.content, 'html.parser')
+            #title = soup.title.text
+            #webtext = soup.contents
+                
             #print(webtext)
         except:
             print("Invalid URL or empty request results for Link:")
-            print(item['link'])
+            #print(item['link'])
+            print(item)
             #all_results = all_results + item['link']
     return all_results
 
@@ -70,30 +73,24 @@ def search_for_leads(row):
     while start < 15:
         params = get_search_params(row, start)
         results = get_search_results(params)
-        all_results = store_and_print(results)
+        all_results = store_and_print(results, row)
         start = start + 10
     return all_results
 
-def write_to_file():
-    search_data_df = dataTable.get_dataframe("bä_ms_06_Leads_2024-02-29_2024-03-30.csv")
-
-    search_data_df.info()
-
-    validate_df = validate_mail.mail_validation(search_data_df)
-
-    validate_df.info()
-
-    all_results = ''
-
-    for index,row in validate_df.iterrows():
-        print(index)
-        name = row.firstName + " " + row.lastName
-        all_results = all_results + name + "\n" + search_for_leads(name) + "\n"
-    with open("Output.txt", "w") as text_file:
-        text_file.write(all_results)
+def do_linkedin_search():
+    all_results = []
+    names = dataTable.get_data_names()
+    for name in names:
+        results = search_for_leads(name)
+        all_results.extend(results)
+    # Convert to DataFrame
+    df = pd.DataFrame(all_results, columns=['Name', 'LinkedIn URL'])
+    # Write to CSV file
+    df.to_csv("Output_try.csv", index=False)
 
 def main():
-    write_to_file()
+    #write_to_file()
+    do_linkedin_search()
 
 if __name__ == "__main__":
     main()
