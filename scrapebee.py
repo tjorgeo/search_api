@@ -8,12 +8,13 @@ import pandas as pd
 import os
 
 
+
+# Scraping various websites
 def scrape_site(urls):
     load_dotenv()
-    # Params for google search api
     API_KEY = os.getenv('SCRAPEBEE_API_KEY')
-
-    client = ScrapingBeeClient(api_key='IEFN589WKC94DBOL6OVBLN0NDC5AFYTSW62QEI34K3NH7MHDMSYNX8TUGO9ZY5EYHB8ITW156Y5AG3Z2')
+    # Params for google search api
+    client = ScrapingBeeClient(api_key=API_KEY)
     for url in urls:
         response = client.get(url,
             params = { 
@@ -21,38 +22,36 @@ def scrape_site(urls):
         })
         print('Website HTML: ', response.content)
 
-def get_results(results):
-    all_results = ''
-    urls =  ''
-    for result in results:
-        for key in result:
-            print(key,":", result[key]) 
-
-    return all_results, urls
-
-
+# scraping google search
 def send_request(name):
+    load_dotenv()
+    API_KEY = os.getenv('SCRAPEBEE_API_KEY')
     response = requests.get(
         url='https://app.scrapingbee.com/api/v1/store/google',
         params={
-            'api_key': 'IEFN589WKC94DBOL6OVBLN0NDC5AFYTSW62QEI34K3NH7MHDMSYNX8TUGO9ZY5EYHB8ITW156Y5AG3Z2',
+            'api_key': API_KEY,
              
             'search': name,
             'country_code': 'de',
             'language': 'de',
             'nb_results': '10', 
         },
-        
     )
     print('Response HTTP Status Code: ', response.status_code)
     return response
 
+# method to filter the linkedin url outof the google search results
 def get_linkedin_url(name):
     response = send_request(name)
     if response.status_code == 200:
         #print('Response HTTP Response Body: ', response.content)
         linkedin_url = ""
-        firstName, lastName = name.split(maxsplit=1)
+        name_parts = name.split(maxsplit=1)
+        # Assign firstName and lastName
+        if len(name_parts) == 1:
+            firstName = lastName = name_parts[0]
+        else:
+            firstName, lastName = name_parts
         results = response.json()
         #print("Results:", results)
         organic_results = results['organic_results']
@@ -64,29 +63,43 @@ def get_linkedin_url(name):
     else: linkedin_url = str(response.json())
     return linkedin_url
 
+# method to get the linkedin URLs and put them in a DataFrame and export a CSV file
 def scrape_linkedin_google():
+    j = 1
     results = []
-    names = dataTable.get_data_names()
-    for name in names:
+    df = dataTable.get_dataframe("data/pipedrive_01_07_24.csv")
+    df = df.iloc[800:1000]
+    #names = dataTable.get_data_names()
+
+    # iterating through names and finding Linkedin URL
+    for name in df["name"]:
+            # Ensure name is a string
+        if isinstance(name, float):
+            name = str(name)
+        elif name is None:
+            name = ""
+        print(j)
+        i = 0
         linkedin_url = get_linkedin_url(name)
         if len(linkedin_url) < 1:
             linkedin_url = get_linkedin_url(str(name + " Linkedin"))
-        while "error" in linkedin_url:
-            print(name + ", " + linkedin_url)
+        while "error" in linkedin_url and i < 5:
+            print(str(i) + ") " + name + ", " + linkedin_url)
             linkedin_url = get_linkedin_url(name)
+            i = i + 1
         results.append((name,linkedin_url))
         print(name + ", " + linkedin_url)
+        df.loc[df['name'] == name, 'Person - LinkedIn'] = linkedin_url
+        j = j + 1
 
     # Convert to DataFrame
-    df = pd.DataFrame(results, columns=['Name', 'LinkedIn URL'])
+    #df = pd.DataFrame(results, columns=['Name', 'LinkedIn URL'])
     # Write to CSV file
-    df.to_csv("Output_bee.csv", index=False)
+    df.to_csv("output/Output_bee_800_1000.csv", index=False)
 
+# Main method for this application
 def main():
     scrape_linkedin_google()
-
-
-
 
 if __name__ == "__main__":
     main()

@@ -3,12 +3,12 @@ import pandas as pd
 
 def get_dataframe(file):
     #try:
-    data = pd.read_csv(file, encoding = "UTF-16 LE", sep='\t', engine='python')
+    #data = pd.read_csv(file, encoding = "UTF-16 LE", sep='\t', engine='python')
+    data = pd.read_csv(file)
     df = pd.DataFrame(data)
-    relevant_df = pd.DataFrame(df[["firstName", "lastName", "email", "postcode", "city", "company"]])
-    relevant_df = relevant_df.head()
-    print(relevant_df)
-    return relevant_df
+    df['name'] = df["Person - Vorname"] + " " + df["Person - Nachname"]
+    #relevant_df = pd.DataFrame(df[["firstName", "lastName", "email", "postcode", "city", "company"]])
+    return df
     
 def get_data_names():
     names = ["Hannes Tausend",
