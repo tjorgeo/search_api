@@ -6,3 +6,6 @@ data/
 
 # Ignore environment variables
 .env
+
+# all csv files
+*.csv
