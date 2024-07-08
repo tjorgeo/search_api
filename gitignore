@@ -1,3 +1,8 @@
-.txt
-.csv
 output/
+data/
+
+# Ignore OS generated files
+.DS_Store
+
+# Ignore environment variables
+.env
